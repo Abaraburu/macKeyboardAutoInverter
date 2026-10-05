@@ -1,6 +1,10 @@
 // Quando la tastiera Lenovo esterna è collegata:
 //   - layout "Italiano – Pro"
-//   - Alt sinistro <-> Windows sinistro (così Alt+Tab = Cmd+Tab), AltGr resta Option
+//   - tasti come su Windows (solo sulla Lenovo):
+//       Ctrl    -> Command  (Ctrl+C/V/Z...)
+//       Alt     -> Command  (Alt+Tab)
+//       Windows -> Ctrl
+//       AltGr resta Option (@ # [ ])
 // Quando viene scollegata: torna al layout "ABC".
 import Foundation
 import IOKit
@@ -10,8 +14,12 @@ let vendorID = 1203      // 0x04B3 (IBM/Lenovo)
 let productID = 12325    // 0x3025
 let layoutEsterna = "com.apple.keylayout.Italian-Pro"
 let layoutInterna = "com.apple.keylayout.ABC"
-let leftAlt = 0x7000000E2, leftGUI = 0x7000000E3
-let mapping = "{\"UserKeyMapping\":[{\"HIDKeyboardModifierMappingSrc\":\(leftAlt),\"HIDKeyboardModifierMappingDst\":\(leftGUI)},{\"HIDKeyboardModifierMappingSrc\":\(leftGUI),\"HIDKeyboardModifierMappingDst\":\(leftAlt)}]}"
+let leftCtrl = 0x7000000E0, leftAlt = 0x7000000E2, leftGUI = 0x7000000E3
+let rightCtrl = 0x7000000E4, rightGUI = 0x7000000E7
+let remaps = [(leftCtrl, leftGUI), (leftAlt, leftGUI), (leftGUI, leftCtrl), (rightCtrl, rightGUI)]
+let mapping = "{\"UserKeyMapping\":[" + remaps.map {
+    "{\"HIDKeyboardModifierMappingSrc\":\($0.0),\"HIDKeyboardModifierMappingDst\":\($0.1)}"
+}.joined(separator: ",") + "]}"
 
 func log(_ s: String) { print("\(Date()) \(s)"); fflush(stdout) }
 
@@ -43,7 +51,7 @@ func applyMapping() {
     p.executableURL = URL(fileURLWithPath: "/usr/bin/hidutil")
     p.arguments = ["property", "--matching", "{\"VendorID\":\(vendorID),\"ProductID\":\(productID)}", "--set", mapping]
     p.standardOutput = FileHandle.nullDevice
-    do { try p.run(); p.waitUntilExit(); log("mappatura Alt/Windows applicata (\(p.terminationStatus))") }
+    do { try p.run(); p.waitUntilExit(); log("mappatura tasti applicata (\(p.terminationStatus))") }
     catch { log("hidutil fallito: \(error)") }
 }
 
